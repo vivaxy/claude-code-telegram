@@ -185,6 +185,25 @@ class ClaudeSDKManager:
                     path=str(claude_md_path),
                 )
 
+            # Load memory file for new sessions only; ignore if not found
+            memory_path = Path(working_directory) / "data" / "memory.md"
+            if memory_path.exists():
+                if not continue_session:
+                    memory_content = memory_path.read_text(encoding="utf-8")
+                    base_prompt += (
+                        "\n\n## Memory\n"
+                        "The following is your persistent memory from previous sessions:\n\n"
+                        + memory_content
+                    )
+                    logger.info(
+                        "Loaded memory file into system prompt",
+                        path=str(memory_path),
+                    )
+                base_prompt += (
+                    "\n\nOnly update the memory file (data/memory.md) when the user "
+                    "explicitly asks you to remember something."
+                )
+
             # When DISABLE_TOOL_VALIDATION=true, pass None for allowed/disallowed
             # tools so the SDK does not restrict tool usage (e.g. MCP tools).
             if self.config.disable_tool_validation:
