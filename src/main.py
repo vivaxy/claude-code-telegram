@@ -5,6 +5,7 @@ import asyncio
 import logging
 import signal
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -43,35 +44,53 @@ def setup_logging(debug: bool = False) -> None:
     """Configure structured logging."""
     level = logging.DEBUG if debug else logging.INFO
 
-    # Configure standard logging
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        stream=sys.stdout,
-    )
+    def add_timestamp(
+        logger: Any, method: str, event_dict: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        now = datetime.now()
+        ms = now.microsecond // 1000
+        event_dict["timestamp"] = now.strftime("%Y-%m-%d %H:%M:%S.") + f"{ms:03d}"
+        return event_dict
 
-    # Configure structlog
+    # Shared pre-processors for both structlog and foreign (stdlib) loggers
+    shared_processors: list = [
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        add_timestamp,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+    ]
+
+    # Configure structlog — wrap_for_formatter hands off to ProcessorFormatter
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.UnicodeDecoder(),
-            (
-                structlog.processors.JSONRenderer()
-                if not debug
-                else structlog.dev.ConsoleRenderer()
-            ),
+            *shared_processors,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
+
+    # Single formatter for all logs (structlog + third-party stdlib loggers)
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=shared_processors,
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.dev.ConsoleRenderer(colors=debug),
+        ],
+    )
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers = [handler]
+    root_logger.setLevel(level)
 
 
 def parse_args() -> argparse.Namespace:
