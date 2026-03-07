@@ -1276,7 +1276,7 @@ async def handle_export_callback(
                 f"📤 <b>Session Export Complete</b>\n\n"
                 f"Format: {escape_html(exported_session.format.upper())}\n"
                 f"Size: {exported_session.size_bytes:,} bytes\n"
-                f"Created: {exported_session.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"Created: {exported_session.created_at.astimezone().strftime('%Y-%m-%d %H:%M:%S')}"
             ),
             parse_mode="HTML",
         )

@@ -911,7 +911,7 @@ async def session_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"📂 Directory: <code>{relative_path}/</code>",
         f"🤖 Claude Session: {'✅ Active' if claude_session_id else '❌ None'}",
         usage_info.rstrip(),
-        f"🕐 Last Update: {update.message.date.strftime('%H:%M:%S UTC')}",
+        f"🕐 Last Update: {update.message.date.astimezone().strftime('%H:%M:%S %Z')}",
     ]
 
     if claude_session_id:

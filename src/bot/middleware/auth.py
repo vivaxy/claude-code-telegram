@@ -86,7 +86,7 @@ async def auth_middleware(handler: Callable, event: Any, data: Dict[str, Any]) -
         if event.effective_message:
             await event.effective_message.reply_text(
                 f"🔓 Welcome! You are now authenticated.\n"
-                f"Session started at {datetime.now(UTC).strftime('%H:%M:%S UTC')}"
+                f"Session started at {datetime.now(UTC).astimezone().strftime('%H:%M:%S %Z')}"
             )
 
         # Continue to handler

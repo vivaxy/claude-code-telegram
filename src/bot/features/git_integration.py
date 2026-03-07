@@ -401,7 +401,7 @@ class GitIntegration:
 
         for commit in commits:
             lines.append(
-                f"\n🔹 {commit.hash} - {commit.date.strftime('%Y-%m-%d %H:%M')}"
+                f"\n🔹 {commit.hash} - {commit.date.astimezone().strftime('%Y-%m-%d %H:%M')}"
             )
             lines.append(f"   👤 {commit.author}")
             lines.append(f"   💬 {commit.message}")

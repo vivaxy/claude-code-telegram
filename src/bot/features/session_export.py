@@ -86,7 +86,7 @@ class SessionExporter:
             raise ValueError(f"Unsupported export format: {format}")
 
         # Create filename
-        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"session_{session_id[:8]}_{timestamp}.{extension}"
 
         return ExportedSession(
