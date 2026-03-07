@@ -206,17 +206,34 @@ class ClaudeCodeBot:
                     allowed_updates=Update.ALL_TYPES,
                 )
             else:
-                # Polling mode - initialize and start polling manually
-                await self.app.initialize()
+                # Polling mode
                 await self.app.start()
                 await self.app.updater.start_polling(
                     allowed_updates=Update.ALL_TYPES,
                     drop_pending_updates=True,
                 )
 
-                # Keep running until manually stopped
+                # Watchdog loop: detect silent updater failure and recover.
+                # After long idle periods (e.g. 12 h with no messages) the
+                # underlying TCP connection can be silently dropped by NAT /
+                # firewall devices.  If the updater stops on its own we restart
+                # it so messages are not missed indefinitely.
                 while self.is_running:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(30)
+                    if self.is_running and not self.app.updater.running:
+                        logger.warning(
+                            "Updater stopped unexpectedly — restarting polling"
+                        )
+                        try:
+                            await self.app.updater.start_polling(
+                                allowed_updates=Update.ALL_TYPES,
+                                drop_pending_updates=False,
+                            )
+                        except Exception as restart_err:
+                            logger.error(
+                                "Failed to restart polling",
+                                error=str(restart_err),
+                            )
         except Exception as e:
             logger.error("Error running bot", error=str(e))
             raise ClaudeCodeTelegramError(f"Failed to start bot: {str(e)}") from e
